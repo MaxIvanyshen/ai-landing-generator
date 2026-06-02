@@ -66,21 +66,15 @@ The `/api/generate-page` route uses `export const runtime = 'edge'` to avoid Ver
 npm install
 ```
 
-**2. Create a Supabase project** at [supabase.com](https://supabase.com), then run this SQL in the editor:
-```sql
-create table projects (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid references auth.users not null,
-  prompt      text not null,
-  draft       jsonb,
-  html        text,
-  status      text default 'pending',
-  created_at  timestamptz default now()
-);
-alter table projects enable row level security;
-create policy "users see own projects" on projects
-  for all using (auth.uid() = user_id);
+**2. Create a Supabase project** at [supabase.com](https://supabase.com), then apply the migration:
+
+```bash
+npx supabase login
+npx supabase link --project-ref your-project-ref
+npx supabase db push
 ```
+
+Or run the SQL in `supabase/migrations/20260602000000_create_projects.sql` directly in the Supabase SQL editor.
 
 Enable **Email (magic link)** in Authentication → Providers.  
 Set the redirect URL to `http://localhost:3000/auth/callback` (and your production URL).
