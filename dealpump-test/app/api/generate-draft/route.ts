@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ai, MODEL } from '@/lib/ai'
+import { getAI, MODEL } from '@/lib/ai'
 import { buildDraftPrompt } from '@/lib/prompts'
 import type { Draft } from '@/lib/types'
 
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
   const messages = buildDraftPrompt(prompt.trim())
 
-  const completion = await ai.chat.completions.create({
+  const completion = await getAI().chat.completions.create({
     model: MODEL,
     messages: [
       { role: 'system', content: messages.system },

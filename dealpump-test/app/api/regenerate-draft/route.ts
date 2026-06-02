@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ai, MODEL } from '@/lib/ai'
+import { getAI, MODEL } from '@/lib/ai'
 import { buildRegeneratePrompt } from '@/lib/prompts'
 import type { Draft } from '@/lib/types'
 
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
   const messages = buildRegeneratePrompt(prompt, draft, feedback.trim())
 
-  const completion = await ai.chat.completions.create({
+  const completion = await getAI().chat.completions.create({
     model: MODEL,
     messages: [
       { role: 'system', content: messages.system },

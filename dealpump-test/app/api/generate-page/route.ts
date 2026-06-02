@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ai, MODEL } from '@/lib/ai'
+import { getAI, MODEL } from '@/lib/ai'
 import { buildPagePrompt } from '@/lib/prompts'
 
 export const runtime = 'edge'
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   const messages = buildPagePrompt(draft)
 
-  const completion = await ai.chat.completions.create({
+  const completion = await getAI().chat.completions.create({
     model: MODEL,
     messages: [
       { role: 'system', content: messages.system },
