@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, use, useMemo } from 'react'
+import { useEffect, useState, use, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
@@ -119,6 +119,21 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
   }
 
   const busy = regenerating || fixing
+
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 })
+  useEffect(() => {
+    if (!containerRef.current) return
+    const obs = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect
+      setContainerSize({ w: width, h: height })
+    })
+    obs.observe(containerRef.current)
+    return () => obs.disconnect()
+  }, [])
+
+  const DESKTOP_W = 1280
+  const desktopScale = containerSize.w > 0 ? containerSize.w / DESKTOP_W : 1
 
   const safeHtml = useMemo(() => {
     if (!html) return ''
@@ -284,7 +299,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
 
       {/* Preview area */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-        <div className="flex-1 overflow-hidden bg-slate-200 flex items-start justify-center relative min-h-0">
+        <div ref={containerRef} className="flex-1 overflow-hidden bg-slate-200 relative min-h-0">
           {busy && (
             <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center">
               <div className="flex items-center gap-2 text-sm text-slate-600 font-medium bg-white border border-slate-200 shadow-sm rounded-lg px-4 py-2.5">
@@ -294,20 +309,27 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
           {loading ? (
-            <div className="w-full h-full bg-slate-200 animate-pulse" />
-          ) : safeHtml ? (
-            <motion.div
-              layout
-              transition={{ duration: 0.2 }}
-              className={`h-full transition-all duration-300 ${mobile ? 'w-[390px] shadow-xl' : 'w-full'}`}
+            <div className="w-full h-full animate-pulse" />
+          ) : safeHtml ? mobile ? (
+            /* Mobile mode: 390px centered phone frame */
+            <div className="absolute inset-0 flex justify-center">
+              <div className="w-[390px] h-full shadow-2xl">
+                <iframe srcDoc={safeHtml} className="w-full h-full border-0" title="Landing page preview" sandbox="allow-scripts" />
+              </div>
+            </div>
+          ) : (
+            /* Desktop mode: rendered at 1280px, scaled to fit — gray space top/bottom */
+            <div
+              className="absolute left-1/2 top-1/2"
+              style={{
+                width: DESKTOP_W,
+                height: containerSize.h / desktopScale,
+                transform: `translate(-50%, -50%) scale(${desktopScale})`,
+                transformOrigin: 'center center',
+              }}
             >
-              <iframe
-                srcDoc={safeHtml}
-                className="w-full h-full border-0"
-                title="Landing page preview"
-                sandbox="allow-scripts"
-              />
-            </motion.div>
+              <iframe srcDoc={safeHtml} className="w-full h-full border-0" title="Landing page preview" sandbox="allow-scripts" />
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full text-slate-400 text-sm">Page not found</div>
           )}
