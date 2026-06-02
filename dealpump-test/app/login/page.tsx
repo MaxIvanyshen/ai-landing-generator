@@ -10,9 +10,10 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Uncontrolled input — ref always reflects the real DOM value,
-  // including iOS/Android autofill that skips onChange.
   const emailRef = useRef<HTMLInputElement>(null)
+  // Separate ref to capture the value on blur/change — iOS autofill skips
+  // onChange, so reading the controlled state would be stale.
+  const emailValueRef = useRef('')
   const [sentTo, setSentTo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -28,22 +29,29 @@ export default function LoginPage() {
   }, [router, supabase])
 
   async function handleSubmit() {
-    const value = emailRef.current?.value.trim() ?? ''
-    if (!value) return
+    const value = (emailValueRef.current || emailRef.current?.value || '').trim()
+    if (!value) {
+      setError('Please enter your email address')
+      return
+    }
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: value,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    })
-
-    if (error) {
-      setError(error.message)
-    } else {
-      setSentTo(value)
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: value,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      })
+      if (error) {
+        setError(error.message)
+      } else {
+        setSentTo(value)
+      }
+    } catch {
+      setError('Network error — check your connection and try again')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   function reset() {
@@ -101,6 +109,8 @@ export default function LoginPage() {
                   inputMode="email"
                   autoComplete="email"
                   defaultValue=""
+                  onChange={e => { emailValueRef.current = e.target.value }}
+                  onBlur={e => { emailValueRef.current = e.target.value }}
                   onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                   placeholder="you@example.com"
                   className="w-full h-10 px-3.5 rounded-lg border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-colors"
