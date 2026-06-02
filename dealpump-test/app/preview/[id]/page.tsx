@@ -6,11 +6,13 @@ import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/app/ToastProvider'
 
 export default function PreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const supabase = createClient()
+  const toast = useToast()
 
   const [html, setHtml] = useState('')
   const [draft, setDraft] = useState('')
@@ -19,10 +21,8 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
   const [regenerating, setRegenerating] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [mobile, setMobile] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [fixFeedback, setFixFeedback] = useState('')
   const [fixing, setFixing] = useState(false)
-  const [fixError, setFixError] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -50,6 +50,9 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
     if (res.ok) {
       const { data: fresh } = await supabase.from('projects').select('html').eq('id', id).single()
       if (fresh?.html) setHtml(fresh.html)
+      toast('Page regenerated')
+    } else {
+      toast('Regeneration failed', 'error')
     }
     setRegenerating(false)
   }
@@ -62,14 +65,18 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
-    if (res.ok) setPublished(true)
+    if (res.ok) {
+      setPublished(true)
+      toast('Page published — share link is now live')
+    } else {
+      toast('Failed to publish', 'error')
+    }
     setPublishing(false)
   }
 
   async function applyFix() {
     if (!fixFeedback.trim() || fixing || !html) return
     setFixing(true)
-    setFixError('')
     const res = await fetch('/api/fix-page', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -79,9 +86,10 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
       const { data: fresh } = await supabase.from('projects').select('html').eq('id', id).single()
       if (fresh?.html) setHtml(fresh.html)
       setFixFeedback('')
+      toast('Fixes applied')
     } else {
       const data = await res.json()
-      setFixError(data.error ?? 'Something went wrong')
+      toast(data.error ?? 'Failed to apply fixes', 'error')
     }
     setFixing(false)
   }
@@ -98,8 +106,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
 
   function copyShareLink() {
     navigator.clipboard.writeText(`${window.location.origin}/p/${id}`)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    toast('Share link copied')
   }
 
   const busy = regenerating || fixing
@@ -167,7 +174,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
             {published ? (
               <>
                 <button onClick={copyShareLink} className="btn-secondary h-8 px-3 text-xs">
-                  {copied ? '✓ Copied' : 'Copy link'}
+                  Copy link
                 </button>
                 <span className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -240,7 +247,6 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
                   rows={2}
                   className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 placeholder:text-slate-400"
                 />
-                {fixError && <p className="text-xs text-red-500 mt-1">{fixError}</p>}
               </div>
               <button
                 onClick={applyFix}
