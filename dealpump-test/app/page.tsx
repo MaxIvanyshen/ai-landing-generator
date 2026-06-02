@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { Project } from '@/lib/types'
 import { PromptForm } from './PromptForm'
 import { ProjectGrid } from './ProjectGrid'
+import { NavBar } from './NavBar'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -16,32 +17,35 @@ export default async function Home() {
     .order('created_at', { ascending: false })
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white overflow-hidden">
-      {/* Hero section with dot grid */}
-      <div className="relative dot-grid border-b border-white/[0.06]">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-zinc-950 pointer-events-none" />
-        <div className="relative max-w-3xl mx-auto px-4 pt-20 pb-16 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-400 text-xs font-medium mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-            AI-Powered
-          </div>
-          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight gradient-text leading-tight mb-4">
-            Turn ideas into<br />landing pages
+    <div className="min-h-screen bg-slate-50">
+      <NavBar email={user.email ?? ''} />
+
+      <main className="max-w-2xl mx-auto px-4 py-12">
+        {/* Hero */}
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900 mb-3">
+            Turn ideas into landing pages
           </h1>
-          <p className="text-lg text-zinc-400 max-w-md mx-auto mb-10">
-            Describe your product. Get a polished, mobile-ready landing page in seconds.
+          <p className="text-lg text-slate-500">
+            Describe your product and get a polished, mobile-ready landing page in seconds.
           </p>
+        </div>
+
+        {/* Prompt form */}
+        <div className="card p-6 mb-10">
           <PromptForm />
         </div>
-      </div>
 
-      {/* Your pages */}
-      {projects && projects.length > 0 && (
-        <div className="max-w-3xl mx-auto px-4 py-12">
-          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-5">Your pages</h2>
-          <ProjectGrid projects={projects as Project[]} />
-        </div>
-      )}
-    </main>
+        {/* Your pages */}
+        {projects && projects.length > 0 && (
+          <section>
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">
+              Your pages
+            </h2>
+            <ProjectGrid projects={projects as Project[]} />
+          </section>
+        )}
+      </main>
+    </div>
   )
 }

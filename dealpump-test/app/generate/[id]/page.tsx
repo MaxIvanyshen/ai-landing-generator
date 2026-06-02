@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import { createClient } from '@/lib/supabase/client'
-import { Textarea } from '@/components/ui/textarea'
 
 export default function GeneratePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -15,7 +14,7 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
   const supabase = createClient()
 
   const [prompt, setPrompt] = useState('')
-  const [draft, setDraft] = useState<string>('')
+  const [draft, setDraft] = useState('')
   const [prevDraft, setPrevDraft] = useState<string | null>(null)
   const [feedback, setFeedback] = useState('')
   const [loading, setLoading] = useState(true)
@@ -76,51 +75,50 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950"
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
           >
-            <div className="absolute inset-0 dot-grid opacity-30" />
-            <div className="relative flex flex-col items-center gap-4">
-              <div className="w-12 h-12 rounded-full border-2 border-violet-500/30 border-t-violet-500 animate-spin" />
-              <p className="text-lg font-semibold text-white">Building your landing page…</p>
-              <p className="text-sm text-zinc-500">This takes 15–30 seconds</p>
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-10 h-10 rounded-full border-2 border-slate-200 border-t-indigo-600 animate-spin" />
+              <p className="text-lg font-semibold text-slate-900">Building your landing page…</p>
+              <p className="text-sm text-slate-400">This takes 15–30 seconds</p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
-        {/* Top bar */}
-        <div className="border-b border-white/[0.06] bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-10">
-          <div className="max-w-6xl mx-auto px-4 h-12 flex items-center gap-3">
-            <button onClick={() => router.push('/')} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-              Home
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        {/* Top nav */}
+        <div className="bg-white border-b border-slate-100 sticky top-0 z-10 shadow-sm">
+          <div className="max-w-6xl mx-auto px-4 h-12 flex items-center gap-2 text-sm">
+            <button onClick={() => router.push('/')} className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+              Launchly
             </button>
-            <span className="text-zinc-700">/</span>
-            <span className="text-zinc-400 text-sm truncate max-w-xs">{prompt}</span>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-500 truncate max-w-xs">{prompt}</span>
           </div>
         </div>
 
-        {/* Main content */}
+        {/* Main */}
         <div className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-zinc-100">Review draft</h1>
-            <p className="text-xs text-zinc-600">Edit directly or ask for changes below</p>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-base font-semibold text-slate-900">Review your draft</h1>
+            <p className="text-xs text-slate-400">Edit the markdown or ask for changes below</p>
           </div>
 
           {loading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="glass rounded-xl h-96 animate-pulse" />
+              {[0, 1].map((i) => (
+                <div key={i} className="card h-96 animate-pulse bg-slate-100" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[calc(100vh-280px)] min-h-[400px]">
-              {/* Left: markdown preview */}
-              <div className="glass rounded-xl overflow-y-auto relative">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ height: 'calc(100vh - 260px)', minHeight: 400 }}>
+              {/* Left: preview */}
+              <div className="card overflow-y-auto relative">
                 {regenerating && (
-                  <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
-                    <div className="flex items-center gap-2 text-violet-400 text-sm">
-                      <div className="w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
+                    <div className="flex items-center gap-2 text-indigo-600 text-sm font-medium">
+                      <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                       Regenerating…
                     </div>
                   </div>
@@ -130,13 +128,15 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
                 </div>
               </div>
 
-              {/* Right: raw editor */}
-              <div className="flex flex-col gap-2">
-                <p className="text-xs text-zinc-600 px-1">Raw markdown — edit directly</p>
-                <Textarea
+              {/* Right: editor */}
+              <div className="card flex flex-col overflow-hidden">
+                <div className="px-4 pt-3 pb-2 border-b border-slate-100">
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Markdown editor</p>
+                </div>
+                <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  className="flex-1 font-mono text-xs bg-white/[0.03] border-white/[0.06] text-zinc-300 focus:border-violet-500/40 resize-none rounded-xl leading-relaxed h-full"
+                  className="flex-1 font-mono text-xs text-slate-700 bg-slate-50 p-4 resize-none focus:outline-none focus:bg-white transition-colors leading-relaxed"
                   spellCheck={false}
                 />
               </div>
@@ -145,40 +145,40 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
 
           {/* Action bar */}
           {!loading && (
-            <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-3">
+            <div className="mt-4 pt-4 border-t border-slate-200 space-y-3">
               {prevDraft && (
                 <button
                   onClick={() => { setDraft(prevDraft); setPrevDraft(null) }}
-                  className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="text-xs text-slate-400 hover:text-slate-700 transition-colors"
                 >
                   ↩ Undo last regeneration
                 </button>
               )}
 
-              <div className="flex gap-2 items-start">
+              <div className="flex gap-2">
                 <input
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); regenerate() } }}
                   placeholder="What should be different? e.g. More aggressive tone, focus on enterprise…"
                   disabled={regenerating}
-                  className="flex-1 h-10 px-4 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/50 disabled:opacity-50"
+                  className="flex-1 h-9 px-3.5 rounded-lg text-sm border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:opacity-50 transition-colors"
                 />
                 <button
                   onClick={regenerate}
                   disabled={regenerating || !feedback.trim()}
-                  className="h-10 px-4 rounded-xl text-sm border border-white/[0.08] text-zinc-400 hover:border-violet-500/40 hover:text-violet-400 transition-all disabled:opacity-40 shrink-0"
+                  className="btn-secondary h-9 px-4 text-sm"
                 >
                   Regenerate
                 </button>
               </div>
 
-              {apiError && <p className="text-sm text-red-400">{apiError}</p>}
+              {apiError && <p className="text-sm text-red-500">{apiError}</p>}
 
               <button
                 onClick={approvePage}
                 disabled={!draft || generating}
-                className="gradient-btn w-full py-3 rounded-xl text-white text-sm font-semibold"
+                className="btn-primary w-full text-sm"
               >
                 Approve &amp; Generate Page →
               </button>

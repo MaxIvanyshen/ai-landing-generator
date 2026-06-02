@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Landing Page Generator",
-  description: "Generate polished landing pages from a prompt using AI",
+  title: "Launchly — AI Landing Page Generator",
+  description: "Turn ideas into polished landing pages in seconds",
 };
 
 export default function RootLayout({

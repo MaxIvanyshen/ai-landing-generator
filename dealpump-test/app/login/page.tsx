@@ -8,6 +8,19 @@ import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { createClient } from '@/lib/supabase/client'
 
+function LaunchlyLogo() {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
+        </svg>
+      </div>
+      <span className="text-lg font-bold text-slate-900 tracking-tight">Launchly</span>
+    </div>
+  )
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -23,20 +36,14 @@ export default function LoginPage() {
   }, [router, supabase])
 
   return (
-    <div className="min-h-screen dot-grid bg-zinc-950 flex items-center justify-center px-4">
-      {/* Radial fade overlay */}
-      <div className="absolute inset-0 bg-radial-[ellipse_at_center] from-transparent to-zinc-950/80 pointer-events-none" />
-
-      <div className="relative w-full max-w-sm">
-        <div className="glass rounded-2xl p-8">
-          <div className="mb-8 text-center">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/30 mb-4">
-              <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="card p-8">
+          <div className="mb-7 text-center">
+            <div className="flex justify-center mb-4">
+              <LaunchlyLogo />
             </div>
-            <h1 className="text-xl font-bold gradient-text">Landing Page Generator</h1>
-            <p className="mt-1.5 text-sm text-zinc-500">Sign in to start generating</p>
+            <p className="text-sm text-slate-500">Turn ideas into landing pages</p>
           </div>
           <Auth
             supabaseClient={supabase}
@@ -45,25 +52,25 @@ export default function LoginPage() {
               variables: {
                 default: {
                   colors: {
-                    brand: '#7c3aed',
-                    brandAccent: '#6d28d9',
-                    inputBackground: 'rgba(255,255,255,0.05)',
-                    inputText: '#f4f4f5',
-                    inputBorder: 'rgba(255,255,255,0.1)',
-                    inputBorderFocus: '#7c3aed',
-                    inputLabelText: '#71717a',
-                    messageText: '#f4f4f5',
-                    anchorTextColor: '#a78bfa',
-                    dividerBackground: 'rgba(255,255,255,0.08)',
-                    defaultButtonBackground: 'rgba(255,255,255,0.05)',
-                    defaultButtonBackgroundHover: 'rgba(255,255,255,0.08)',
-                    defaultButtonBorder: 'rgba(255,255,255,0.1)',
-                    defaultButtonText: '#f4f4f5',
+                    brand: '#4F46E5',
+                    brandAccent: '#4338CA',
+                    inputBackground: '#ffffff',
+                    inputText: '#0F172A',
+                    inputBorder: '#E2E8F0',
+                    inputBorderFocus: '#6366F1',
+                    inputLabelText: '#64748B',
+                    messageText: '#334155',
+                    anchorTextColor: '#4F46E5',
+                    dividerBackground: '#E2E8F0',
+                    defaultButtonBackground: '#F8FAFC',
+                    defaultButtonBackgroundHover: '#F1F5F9',
+                    defaultButtonBorder: '#E2E8F0',
+                    defaultButtonText: '#334155',
                   },
                   radii: {
-                    borderRadiusButton: '0.625rem',
-                    buttonBorderRadius: '0.625rem',
-                    inputBorderRadius: '0.625rem',
+                    borderRadiusButton: '0.5rem',
+                    buttonBorderRadius: '0.5rem',
+                    inputBorderRadius: '0.5rem',
                   },
                 },
               },
