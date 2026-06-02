@@ -185,7 +185,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
         transition={{ duration: 0.25 }}
         className="bg-white border-b border-slate-100 shadow-sm shrink-0"
       >
-        <div className="max-w-6xl mx-auto px-3 h-12 flex items-center gap-2">
+        <div className="max-w-6xl mx-auto px-3 h-12 flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {/* Back */}
           <button
             onClick={() => router.push('/')}
@@ -239,9 +239,6 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
             </svg>
             <span className="hidden sm:inline">Download</span>
           </button>
-
-          {/* Spacer */}
-          <div className="flex-1" />
 
           {/* Primary: Publish / Published + Copy */}
           {published ? (
