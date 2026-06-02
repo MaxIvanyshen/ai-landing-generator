@@ -1,4 +1,4 @@
-# AI Landing Page Generator
+# Launchly — AI Landing Page Generator
 
 A multi-step AI web app that turns a product description into a polished, production-ready landing page. Built as a 6-hour exercise in pragmatic AI product development.
 
@@ -8,19 +8,19 @@ A multi-step AI web app that turns a product description into a polished, produc
 
 ## Architecture
 
-**Stack:** Next.js 15 (App Router) · TypeScript · Supabase · OpenAI-compatible API · Tailwind CSS · shadcn/ui · Vercel
+**Stack:** Next.js 16 (App Router) · TypeScript · Supabase · OpenAI-compatible API · Tailwind CSS · Framer Motion · Vercel
 
 | Layer | Choice | Why |
 |---|---|---|
-| Framework | Next.js 15 App Router | Server components, API routes, edge runtime in one repo |
+| Framework | Next.js 16 App Router | Server components, API routes, streaming responses in one repo |
 | Auth + DB | Supabase | Single `projects` table, magic-link auth, Row Level Security |
 | AI | OpenAI SDK (configurable endpoint) | Works with any OpenAI-compatible provider |
-| Styling | Tailwind + shadcn/ui | Fast, polished, mobile-first without custom design work |
-| Deploy | Vercel | Zero-config, edge runtime support for long AI calls |
+| Styling | Tailwind + custom CSS | Fast, polished, mobile-first — shadcn scaffolded but mostly replaced |
+| Deploy | Vercel | Zero-config Node.js functions with `maxDuration` for long AI calls |
 
 **Database schema** — one table, minimal:
 ```sql
-projects(id, user_id, prompt, draft jsonb, html text, status, created_at)
+projects(id, user_id, prompt, draft text, html text, status, published boolean, created_at)
 ```
 RLS ensures users can only access their own projects — no manual auth checks in API routes.
 
@@ -29,33 +29,37 @@ RLS ensures users can only access their own projects — no manual auth checks i
 ## Generation Pipeline
 
 ```
-User prompt
+User prompt (home page)
   ↓
-API: /api/generate-draft  (AI Call 1)
-  → Returns structured draft JSON: sections[], palette, style
+POST /api/generate-draft  (AI Call 1)
+  → Returns structured markdown: sections, copy, palette, visual directions
   → Saved to Supabase with status: 'draft'
   ↓
 /generate/[id]  — Review page
-  → Left panel: human-readable outline of the draft
-  → Right panel: raw JSON editor with Apply button
-  → Refinement input: "What should be different?" → /api/regenerate-draft (AI Call 1b, repeatable)
+  → Left panel: rendered markdown preview (ReactMarkdown)
+  → Right panel: raw markdown editor — user can edit directly
+  → Refinement input: "What should be different?" → POST /api/regenerate-draft (repeatable)
   → Undo button restores previous draft from local state
   ↓
 User clicks "Approve & Generate Page"
   ↓
-API: /api/generate-page  (AI Call 2, Edge runtime)
-  → Takes approved draft JSON → generates single self-contained HTML file
+POST /api/generate-page  (AI Call 2, streaming)
+  → Draft markdown → single self-contained HTML file
+  → Streamed token-by-token to browser (no timeout, visible progress)
+  → Client accumulates stream, strips markdown fences, saves to Supabase
   → Tailwind CDN, Google Fonts, inline SVGs, real copy, mobile-first layout
-  → Saved to Supabase with status: 'done'
   ↓
-/preview/[id]  — Preview page
-  → iframe renders the full HTML
-  → Mobile (390px) / Desktop toggle
+/preview/[id]  — Preview + refinement page
+  → iframe renders full HTML; desktop (scaled to fit) / mobile (390px) toggle
+  → Fix feedback textarea → POST /api/fix-page (AI Call 3, streaming)
+     Streams targeted HTML corrections back; client saves result
+  → Regenerate from scratch (re-runs AI Call 2)
   → Download HTML button
-  → Copy shareable link → /p/[id] (public, no auth required)
+  → Publish toggle: unpublished pages return 404 at /p/[id]
+  → Copy share link → /p/[id] (public, no auth required)
 ```
 
-The `/api/generate-page` route uses `export const runtime = 'edge'` to avoid Vercel's 60-second serverless timeout on the longer HTML generation call.
+Streaming (AI Calls 2 and 3) means the browser never sits on a hung request — tokens flow as they're generated, so even a 60-second generation stays responsive.
 
 ---
 
@@ -66,7 +70,7 @@ The `/api/generate-page` route uses `export const runtime = 'edge'` to avoid Ver
 npm install
 ```
 
-**2. Create a Supabase project** at [supabase.com](https://supabase.com), then apply the migration:
+**2. Create a Supabase project** at [supabase.com](https://supabase.com), then apply the migrations:
 
 ```bash
 npx supabase login
@@ -74,23 +78,20 @@ npx supabase link --project-ref your-project-ref
 npx supabase db push
 ```
 
-Or run the SQL in `supabase/migrations/20260602000000_create_projects.sql` directly in the Supabase SQL editor.
+Or run the SQL files in `supabase/migrations/` directly in the Supabase SQL editor (in order).
 
 Enable **Email (magic link)** in Authentication → Providers.  
 Set the redirect URL to `http://localhost:3000/auth/callback` (and your production URL).
 
 **3. Configure environment variables**
-```bash
-cp .env.local .env.local.bak  # backup the template
-```
-Fill in `.env.local`:
+
+Copy `.env.local.example` to `.env.local` and fill in:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 OPENAI_BASE_URL=https://api.openai.com/v1   # or any OpenAI-compatible endpoint
 OPENAI_API_KEY=your-api-key
 OPENAI_MODEL=gpt-4.1-mini                   # default; override as needed
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 **4. Run**
@@ -104,25 +105,25 @@ npm run dev
 
 This project was built entirely with Claude Code (Anthropic's CLI coding assistant):
 
-- **Planning:** Generated the full architecture plan (`landing-page-generator-plan.md`) in a planning session, covering stack choices, data model, pipeline design, and page-by-page specs. Iterated on UX decisions (e.g. replacing per-field inline editing with a two-panel plan list + JSON editor) before writing a line of code.
+- **Planning:** Architecture, data model, pipeline design, and page-by-page specs were planned in Claude Code's plan mode before writing any code. UX decisions (e.g. markdown draft over JSON, two-panel review layout, publish gate flow) were iterated in conversation.
 
-- **Documentation research:** Used the context7 MCP tool to pull current docs for Next.js 15, `@supabase/ssr`, and the OpenAI Node SDK to verify best practices (async `cookies()`, `getUser()` vs `getSession()` in middleware, correct cookie propagation pattern).
+- **Documentation research:** Used the context7 MCP tool to pull current docs for Next.js, `@supabase/ssr`, and the OpenAI Node SDK to verify patterns (async `cookies()`, correct cookie propagation in auth callback, `allowedDevOrigins` for tunnel testing).
 
-- **Code generation:** All files were generated by Claude Code — Supabase client setup, middleware, API routes, and pages. Iteration was fast because the plan was precise enough that generated code required minimal correction.
+- **Code generation:** All files generated by Claude Code — Supabase clients, middleware, API routes, pages, components, CSS. Iteration was fast because the plan was precise enough that generated code required minimal correction.
 
-- **Debugging:** Claude Code diagnosed and fixed build errors (lazy OpenAI client initialization to avoid module-level errors, empty-string env var handling with `||` vs `??`).
+- **Debugging:** Claude Code diagnosed several non-obvious issues: Next.js 16's dev server blocking JS chunks from ngrok tunnels (`allowedDevOrigins`), Supabase auth callback cookies not propagating to redirect responses, and iOS Safari autofill bypassing React's `onChange`.
 
-Hand-written: the prompts in `lib/prompts.ts` were tuned manually to get consistent JSON output from Call 1 and compelling HTML from Call 2.
+- **Prompt engineering:** The system prompts in `lib/prompts.ts` were tuned iteratively — including specific constraints like avoiding Tailwind opacity modifiers on CDN, forcing contrast checks per section, and injecting the current date so generated copy stays accurate.
 
 ---
 
 ## Intentional simplifications
 
 - **No team/sharing permissions** — users see only their own projects. Multi-user sharing would require a separate `shares` table and additional RLS policies.
-- **No edit history** — undo is local state only (one level deep). A full version history would need a `project_versions` table.
-- **No section reordering** — drag-and-drop was cut; the JSON editor is the escape hatch for power users who want full control.
-- **No image generation** — all visuals are pure CSS/SVG. Real image generation (DALL-E, Stability) would significantly increase cost and latency per page.
-- **No multi-page output** — the generator produces a single landing page. A full site builder would require a different data model.
-- **Single model for all calls** — a production version might use a faster/cheaper model for draft generation and a more capable one for final HTML.
+- **No edit history** — undo is local state only (one level deep). Full version history would need a `project_versions` table.
+- **No image generation** — all visuals are pure CSS/SVG. Real image generation would significantly increase cost and latency.
+- **No multi-page output** — produces a single landing page. A full site builder needs a different data model.
+- **Single model for all calls** — a production version might use a faster model for draft generation and a more capable one for final HTML.
+- **Fix feedback is stateless** — each fix call takes the current HTML and applies one round of changes. There's no conversation history across fix iterations.
 
 These are all reasonable next steps, not oversights.
