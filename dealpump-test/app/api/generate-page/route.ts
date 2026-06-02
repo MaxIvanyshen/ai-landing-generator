@@ -21,7 +21,6 @@ export async function POST(req: Request) {
       { role: 'user', content: messages.user },
     ],
     temperature: 0.5,
-    max_tokens: 8000,
   })
 
   let html = completion.choices[0]?.message?.content ?? ''

@@ -9,11 +9,11 @@ export async function GET(
 
   const { data, error } = await supabase
     .from('projects')
-    .select('html')
+    .select('html, published')
     .eq('id', id)
     .single()
 
-  if (error || !data?.html) {
+  if (error || !data?.html || !data.published) {
     return new Response('Page not found', { status: 404 })
   }
 

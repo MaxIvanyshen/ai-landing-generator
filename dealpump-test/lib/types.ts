@@ -7,5 +7,6 @@ export type Project = {
   draft: Draft | null
   html: string | null
   status: 'pending' | 'draft' | 'done'
+  published: boolean
   created_at: string
 }

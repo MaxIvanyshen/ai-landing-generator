@@ -72,15 +72,23 @@ export function buildPagePrompt(draft: string) {
     system: `You are an expert frontend developer. Convert a landing page plan into a single, beautiful, self-contained HTML file.
 
 Requirements:
-- Single HTML file — no external dependencies except CDN
+- Always include this CSS reset: "*, *::before, *::after { box-sizing: border-box; } html, body { margin: 0; padding: 0; }"
+- ONE single HTML file only — this is a one-page site, no routing, no links to other pages
+- All sections (hero, features, social proof, CTA) scroll vertically on the same page
+- No navigation links that go to separate pages — anchor links that scroll within the page are fine
+- No external dependencies except CDN
 - Include Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Include a Google Font via <link> tag (pick one that fits the style)
 - NO <img> tags — use inline SVGs, CSS shapes, or pure CSS visuals instead
+- All inline SVGs MUST have explicit width and height attributes (e.g. width="24" height="24") and must never fill the full viewport — decorative SVGs should be small icons, not full-width illustrations
 - Mobile-first responsive layout
-- Smooth scroll behavior
-- Subtle CSS animations (fade-in on scroll with Intersection Observer or simple CSS keyframes)
+- Include a sticky top navigation bar with the product name/logo on the left and anchor links to each section on the right (e.g. Features, Testimonials, Get Started). Nav should have a solid or slightly translucent background so it stays readable when scrolling. On mobile, show a hamburger menu or stack the links vertically — never hide nav links with no fallback.
+- Do NOT use Tailwind opacity modifiers (e.g. bg-color/10) on custom colors defined in tailwind.config — they silently fail in the Play CDN. Use full hex values or rgba() instead for transparent tints.
+- Smooth scroll: add scroll-behavior: smooth to html. For nav links use onclick="document.getElementById('section-id').scrollIntoView({behavior:'smooth'}); return false;" instead of href="#id" anchors — this prevents the link from navigating the browser and keeps the scroll within the page
+- All content must be VISIBLE immediately on load — do NOT use Intersection Observer, do NOT start elements with opacity:0 or transform that requires scroll to trigger. Use CSS transitions only for hover effects.
 - Real copy from the plan — no placeholder text
 - Polished, production-quality design that matches the palette and style from the plan
+- CRITICAL — text contrast: NEVER use light text (white, gray-100, gray-200, gray-300) on a white or light background. Every section must have explicit background color set. If a section has a light/white background use dark text (gray-900, gray-800). If a section has a dark background use light text (white, gray-100). Always verify each section's bg color matches its text color before output.
 - Return ONLY the HTML. No markdown fences, no explanation.`,
     user: `Build a landing page from this plan:\n\n${draft}`,
   }

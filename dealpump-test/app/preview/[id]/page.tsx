@@ -13,18 +13,78 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
   const supabase = createClient()
 
   const [html, setHtml] = useState('')
+  const [draft, setDraft] = useState('')
+  const [published, setPublished] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [regenerating, setRegenerating] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const [mobile, setMobile] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [fixFeedback, setFixFeedback] = useState('')
+  const [fixing, setFixing] = useState(false)
+  const [fixError, setFixError] = useState('')
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from('projects').select('html').eq('id', id).single()
+      const { data } = await supabase
+        .from('projects')
+        .select('html, draft, published')
+        .eq('id', id)
+        .single()
       if (data?.html) setHtml(data.html)
+      if (data?.draft) setDraft(data.draft)
+      if (data?.published) setPublished(data.published)
       setLoading(false)
     }
     load()
   }, [id, supabase])
+
+  async function regeneratePage() {
+    if (!draft || regenerating) return
+    setRegenerating(true)
+    const res = await fetch('/api/generate-page', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, draft }),
+    })
+    if (res.ok) {
+      const { data: fresh } = await supabase.from('projects').select('html').eq('id', id).single()
+      if (fresh?.html) setHtml(fresh.html)
+    }
+    setRegenerating(false)
+  }
+
+  async function publishPage() {
+    if (publishing || published) return
+    setPublishing(true)
+    const res = await fetch('/api/publish', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (res.ok) setPublished(true)
+    setPublishing(false)
+  }
+
+  async function applyFix() {
+    if (!fixFeedback.trim() || fixing || !html) return
+    setFixing(true)
+    setFixError('')
+    const res = await fetch('/api/fix-page', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, html, feedback: fixFeedback }),
+    })
+    if (res.ok) {
+      const { data: fresh } = await supabase.from('projects').select('html').eq('id', id).single()
+      if (fresh?.html) setHtml(fresh.html)
+      setFixFeedback('')
+    } else {
+      const data = await res.json()
+      setFixError(data.error ?? 'Something went wrong')
+    }
+    setFixing(false)
+  }
 
   function downloadHtml() {
     const blob = new Blob([html], { type: 'text/html' })
@@ -42,8 +102,11 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const busy = regenerating || fixing
+
   return (
     <div className="h-screen flex flex-col bg-slate-50">
+      {/* Toolbar */}
       <motion.div
         initial={{ opacity: 0, y: -4 }}
         animate={{ opacity: 1, y: 0 }}
@@ -62,7 +125,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
           </button>
 
           <div className="flex items-center gap-2">
-            {/* Toggle */}
+            {/* Desktop / Mobile toggle */}
             <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-xs">
               <button
                 onClick={() => setMobile(false)}
@@ -84,36 +147,115 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
               </button>
             </div>
 
-            <button onClick={copyShareLink} className="btn-secondary h-8 px-3 text-xs">
-              {copied ? '✓ Copied' : 'Copy link'}
+            <button
+              onClick={regeneratePage}
+              disabled={busy || !draft}
+              className="btn-secondary h-8 px-3 text-xs"
+            >
+              {regenerating ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                  Regenerating…
+                </span>
+              ) : '↺ Regenerate'}
             </button>
 
-            <button onClick={downloadHtml} disabled={!html} className="btn-primary h-8 px-3 text-xs">
+            <button onClick={downloadHtml} disabled={!html} className="btn-secondary h-8 px-3 text-xs">
               Download HTML
             </button>
+
+            {published ? (
+              <>
+                <button onClick={copyShareLink} className="btn-secondary h-8 px-3 text-xs">
+                  {copied ? '✓ Copied' : 'Copy link'}
+                </button>
+                <span className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Published
+                </span>
+              </>
+            ) : (
+              <button
+                onClick={publishPage}
+                disabled={publishing || !html}
+                className="btn-primary h-8 px-3 text-xs"
+              >
+                {publishing ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Publishing…
+                  </span>
+                ) : 'Publish'}
+              </button>
+            )}
           </div>
         </div>
       </motion.div>
 
-      {/* Preview */}
-      <div className="flex-1 overflow-hidden bg-slate-200 flex items-start justify-center">
-        {loading ? (
-          <div className="w-full h-full bg-slate-200 animate-pulse" />
-        ) : html ? (
-          <motion.div
-            layout
-            transition={{ duration: 0.2 }}
-            className={`h-full transition-all duration-300 ${mobile ? 'w-[390px] shadow-xl' : 'w-full'}`}
-          >
-            <iframe
-              srcDoc={html}
-              className="w-full h-full border-0"
-              title="Landing page preview"
-              sandbox="allow-scripts"
-            />
-          </motion.div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-slate-400 text-sm">Page not found</div>
+      {/* Preview area */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden bg-slate-200 flex items-start justify-center relative">
+          {busy && (
+            <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center">
+              <div className="flex items-center gap-2 text-sm text-slate-600 font-medium bg-white border border-slate-200 shadow-sm rounded-lg px-4 py-2.5">
+                <span className="w-4 h-4 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+                {fixing ? 'Applying fixes…' : 'Regenerating page…'}
+              </div>
+            </div>
+          )}
+          {loading ? (
+            <div className="w-full h-full bg-slate-200 animate-pulse" />
+          ) : html ? (
+            <motion.div
+              layout
+              transition={{ duration: 0.2 }}
+              className={`h-full transition-all duration-300 ${mobile ? 'w-[390px] shadow-xl' : 'w-full'}`}
+            >
+              <iframe
+                srcDoc={html}
+                className="w-full h-full border-0"
+                title="Landing page preview"
+                sandbox="allow-scripts"
+              />
+            </motion.div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-slate-400 text-sm">Page not found</div>
+          )}
+        </div>
+
+        {/* Fix feedback panel */}
+        {html && (
+          <div className="bg-white border-t border-slate-100 shrink-0 px-4 py-3">
+            <div className="max-w-6xl mx-auto flex items-start gap-3">
+              <div className="flex-1">
+                <textarea
+                  value={fixFeedback}
+                  onChange={e => setFixFeedback(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) applyFix()
+                  }}
+                  placeholder="Describe what to fix — e.g. make the CTA button red, fix nav text contrast, increase hero font size…"
+                  rows={2}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 placeholder:text-slate-400"
+                />
+                {fixError && <p className="text-xs text-red-500 mt-1">{fixError}</p>}
+              </div>
+              <button
+                onClick={applyFix}
+                disabled={!fixFeedback.trim() || fixing || !html}
+                className="btn-primary h-[4.5rem] px-4 text-sm shrink-0 self-stretch"
+              >
+                {fixing ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Applying…
+                  </span>
+                ) : 'Apply fixes'}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
