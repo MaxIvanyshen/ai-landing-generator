@@ -161,139 +161,98 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
-      {/* Toolbar */}
+      {/* Toolbar — single row always */}
       <motion.div
         initial={{ opacity: 0, y: -4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
         className="bg-white border-b border-slate-100 shadow-sm shrink-0"
       >
-        {/* Single row on desktop, two rows on mobile */}
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-3 h-12 flex items-center gap-2">
+          {/* Back */}
+          <button
+            onClick={() => router.push('/')}
+            className="text-sm text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
 
-          {/* Row 1: always visible */}
-          <div className="h-12 flex items-center justify-between gap-2">
+          {/* View toggle */}
+          <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-xs shrink-0">
             <button
-              onClick={() => router.push('/')}
-              className="text-sm text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 shrink-0"
+              onClick={() => setMobile(false)}
+              title="Desktop view"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${!mobile ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-800 bg-white'}`}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              <span className="hidden sm:inline">Home</span>
+              <span className="hidden md:inline">Desktop</span>
             </button>
-
-            {/* Desktop/Mobile view toggle — hidden on very small, shown from sm */}
-            <div className="hidden sm:flex items-center rounded-lg border border-slate-200 overflow-hidden text-xs">
-              <button
-                onClick={() => setMobile(false)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${!mobile ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-800 bg-white'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span className="hidden md:inline">Desktop</span>
-              </button>
-              <button
-                onClick={() => setMobile(true)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${mobile ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-800 bg-white'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <span className="hidden md:inline">Mobile</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Secondary actions — hidden on mobile, shown from md */}
-              <div className="hidden md:flex items-center gap-2">
-                <button
-                  onClick={regeneratePage}
-                  disabled={busy || !draft}
-                  className="btn-secondary h-8 px-3 text-xs"
-                >
-                  {regenerating ? (
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                      Regenerating…
-                    </span>
-                  ) : '↺ Regenerate'}
-                </button>
-                <button onClick={downloadHtml} disabled={!html} className="btn-secondary h-8 px-3 text-xs">
-                  Download HTML
-                </button>
-              </div>
-
-              {/* Publish / Published — always visible */}
-              {published ? (
-                <>
-                  <button onClick={copyShareLink} className="btn-secondary h-8 px-3 text-xs">
-                    Copy link
-                  </button>
-                  <span className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="hidden sm:inline">Published</span>
-                  </span>
-                </>
-              ) : (
-                <button
-                  onClick={publishPage}
-                  disabled={publishing || !html}
-                  className="btn-primary h-8 px-3 text-xs"
-                >
-                  {publishing ? (
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      <span className="hidden sm:inline">Publishing…</span>
-                    </span>
-                  ) : 'Publish'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Row 2: mobile-only secondary actions */}
-          <div className="md:hidden flex items-center gap-2 pb-2">
-            {/* View toggle on small screens */}
-            <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-xs sm:hidden">
-              <button
-                onClick={() => setMobile(false)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 transition-colors ${!mobile ? 'bg-indigo-600 text-white' : 'text-slate-500 bg-white'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setMobile(true)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 transition-colors ${mobile ? 'bg-indigo-600 text-white' : 'text-slate-500 bg-white'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-              </button>
-            </div>
-
             <button
-              onClick={regeneratePage}
-              disabled={busy || !draft}
-              className="btn-secondary h-7 px-2.5 text-xs"
+              onClick={() => setMobile(true)}
+              title="Mobile view"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${mobile ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-800 bg-white'}`}
             >
-              {regenerating ? (
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                  Regenerating…
-                </span>
-              ) : '↺ Regenerate'}
-            </button>
-
-            <button onClick={downloadHtml} disabled={!html} className="btn-secondary h-7 px-2.5 text-xs">
-              Download
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <span className="hidden md:inline">Mobile</span>
             </button>
           </div>
+
+          {/* Secondary actions */}
+          <button
+            onClick={regeneratePage}
+            disabled={busy || !draft}
+            title="Regenerate"
+            className="btn-secondary h-8 px-2.5 text-xs shrink-0"
+          >
+            {regenerating
+              ? <span className="w-3 h-3 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+              : <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg><span className="hidden sm:inline">Regenerate</span></>
+            }
+          </button>
+
+          <button onClick={downloadHtml} disabled={!html} title="Download HTML" className="btn-secondary h-8 px-2.5 text-xs shrink-0">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span className="hidden sm:inline">Download</span>
+          </button>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Primary: Publish / Published + Copy */}
+          {published ? (
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={copyShareLink} className="btn-secondary h-8 px-3 text-xs">
+                Copy link
+              </button>
+              <span className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="hidden sm:inline">Published</span>
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={publishPage}
+              disabled={publishing || !html}
+              className="btn-primary h-8 px-3 text-xs shrink-0"
+            >
+              {publishing ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  <span className="hidden sm:inline">Publishing…</span>
+                </span>
+              ) : 'Publish'}
+            </button>
+          )}
         </div>
       </motion.div>
 
