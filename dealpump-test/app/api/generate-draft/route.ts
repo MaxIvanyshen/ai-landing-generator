@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getAI, MODEL } from '@/lib/ai'
 import { buildDraftPrompt } from '@/lib/prompts'
-import type { Draft } from '@/lib/types'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -22,19 +21,9 @@ export async function POST(req: Request) {
     temperature: 0.7,
   })
 
-  const raw = completion.choices[0]?.message?.content ?? ''
-  const cleaned = raw.replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '').trim()
+  const draft = completion.choices[0]?.message?.content?.trim() ?? ''
 
-  let draft: Draft
-  try {
-    draft = JSON.parse(cleaned)
-  } catch {
-    return Response.json({ error: 'AI returned malformed JSON', raw }, { status: 422 })
-  }
-
-  if (!Array.isArray(draft.sections) || draft.sections.length === 0) {
-    return Response.json({ error: 'Draft missing sections', raw }, { status: 422 })
-  }
+  if (!draft) return Response.json({ error: 'AI returned empty draft' }, { status: 422 })
 
   const { data, error } = await supabase
     .from('projects')

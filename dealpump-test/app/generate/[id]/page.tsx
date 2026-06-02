@@ -4,19 +4,10 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
+import { AnimatePresence, motion } from 'framer-motion'
+import ReactMarkdown from 'react-markdown'
 import { createClient } from '@/lib/supabase/client'
-import type { Draft, Section } from '@/lib/types'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-
-const SECTION_LABELS: Record<string, string> = {
-  hero: 'HERO',
-  features: 'FEATURES',
-  social_proof: 'SOCIAL PROOF',
-  cta: 'CTA',
-}
 
 export default function GeneratePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -24,10 +15,8 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
   const supabase = createClient()
 
   const [prompt, setPrompt] = useState('')
-  const [draft, setDraft] = useState<Draft | null>(null)
-  const [prevDraft, setPrevDraft] = useState<Draft | null>(null)
-  const [editorValue, setEditorValue] = useState('')
-  const [editorError, setEditorError] = useState('')
+  const [draft, setDraft] = useState<string>('')
+  const [prevDraft, setPrevDraft] = useState<string | null>(null)
   const [feedback, setFeedback] = useState('')
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
@@ -39,29 +28,12 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
       const { data } = await supabase.from('projects').select('*').eq('id', id).single()
       if (data) {
         setPrompt(data.prompt)
-        setDraft(data.draft)
-        setEditorValue(JSON.stringify(data.draft, null, 2))
+        setDraft(data.draft ?? '')
       }
       setLoading(false)
     }
     load()
   }, [id, supabase])
-
-  function applyEditor() {
-    setEditorError('')
-    try {
-      const parsed = JSON.parse(editorValue)
-      if (!Array.isArray(parsed.sections)) throw new Error('sections must be an array')
-      setDraft(parsed)
-    } catch (e) {
-      setEditorError((e as Error).message)
-    }
-  }
-
-  function syncEditorFromDraft(d: Draft) {
-    setDraft(d)
-    setEditorValue(JSON.stringify(d, null, 2))
-  }
 
   async function regenerate() {
     if (!draft || !feedback.trim()) return
@@ -76,9 +48,8 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
     })
     const data = await res.json()
     setRegenerating(false)
-
     if (!res.ok) { setApiError(data.error ?? 'Regeneration failed'); return }
-    syncEditorFromDraft(data.draft)
+    setDraft(data.draft)
     setFeedback('')
   }
 
@@ -93,156 +64,128 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
       body: JSON.stringify({ id, draft }),
     })
     const data = await res.json()
-
     if (!res.ok) { setApiError(data.error ?? 'Generation failed'); setGenerating(false); return }
     router.push(`/preview/${data.id}`)
   }
 
-  if (generating) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white gap-4">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-lg font-medium">Building your landing page…</p>
-        <p className="text-sm text-gray-400">This takes 15–30 seconds</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-bold">Review Draft</h1>
-            <p className="text-sm text-gray-400 mt-1 line-clamp-1">{prompt}</p>
-          </div>
-          <Button
-            onClick={() => router.push('/')}
-            variant="ghost"
-            className="text-gray-400 hover:text-white"
+    <>
+      <AnimatePresence>
+        {generating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950"
           >
-            ← Back
-          </Button>
+            <div className="absolute inset-0 dot-grid opacity-30" />
+            <div className="relative flex flex-col items-center gap-4">
+              <div className="w-12 h-12 rounded-full border-2 border-violet-500/30 border-t-violet-500 animate-spin" />
+              <p className="text-lg font-semibold text-white">Building your landing page…</p>
+              <p className="text-sm text-zinc-500">This takes 15–30 seconds</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+        {/* Top bar */}
+        <div className="border-b border-white/[0.06] bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-10">
+          <div className="max-w-6xl mx-auto px-4 h-12 flex items-center gap-3">
+            <button onClick={() => router.push('/')} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+              Home
+            </button>
+            <span className="text-zinc-700">/</span>
+            <span className="text-zinc-400 text-sm truncate max-w-xs">{prompt}</span>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 bg-gray-800" />)}</div>
-            <Skeleton className="h-96 bg-gray-800" />
+        {/* Main content */}
+        <div className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-zinc-100">Review draft</h1>
+            <p className="text-xs text-zinc-600">Edit directly or ask for changes below</p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left: Plan list */}
-            <div className="space-y-3 relative">
-              {regenerating && (
-                <div className="absolute inset-0 bg-gray-950/70 rounded-lg flex items-center justify-center z-10">
-                  <div className="flex items-center gap-2 text-indigo-400">
-                    <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm">Regenerating…</span>
-                  </div>
-                </div>
-              )}
-              {draft?.sections.map((section, i) => (
-                <SectionCard key={i} section={section} />
+
+          {loading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="glass rounded-xl h-96 animate-pulse" />
               ))}
-              {draft && (
-                <div className="rounded-lg border border-gray-800 bg-gray-900 p-4 text-xs text-gray-400 space-y-1">
-                  <div><span className="text-gray-500">Palette:</span> {draft.palette}</div>
-                  <div><span className="text-gray-500">Style:</span> {draft.style}</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[calc(100vh-280px)] min-h-[400px]">
+              {/* Left: markdown preview */}
+              <div className="glass rounded-xl overflow-y-auto relative">
+                {regenerating && (
+                  <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
+                    <div className="flex items-center gap-2 text-violet-400 text-sm">
+                      <div className="w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                      Regenerating…
+                    </div>
+                  </div>
+                )}
+                <div className="p-5 draft-prose">
+                  <ReactMarkdown>{draft}</ReactMarkdown>
                 </div>
-              )}
-            </div>
-
-            {/* Right: Editor */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-300">Edit JSON directly</p>
-                <Button
-                  onClick={applyEditor}
-                  size="sm"
-                  variant="outline"
-                  className="border-gray-700 text-gray-300 hover:border-indigo-500 hover:text-indigo-400"
-                >
-                  Apply
-                </Button>
               </div>
-              {editorError && <p className="text-xs text-red-400">{editorError}</p>}
-              <Textarea
-                value={editorValue}
-                onChange={(e) => setEditorValue(e.target.value)}
-                className="min-h-[400px] font-mono text-xs bg-gray-900 border-gray-700 text-gray-200 focus:border-indigo-500 resize-y"
-                spellCheck={false}
-              />
+
+              {/* Right: raw editor */}
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-zinc-600 px-1">Raw markdown — edit directly</p>
+                <Textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  className="flex-1 font-mono text-xs bg-white/[0.03] border-white/[0.06] text-zinc-300 focus:border-violet-500/40 resize-none rounded-xl leading-relaxed h-full"
+                  spellCheck={false}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {!loading && (
-          <div className="mt-8 space-y-4 border-t border-gray-800 pt-6">
-            {prevDraft && (
-              <Button
-                onClick={() => { syncEditorFromDraft(prevDraft); setPrevDraft(null) }}
-                variant="ghost"
-                size="sm"
-                className="text-gray-400 hover:text-white"
-              >
-                ↩ Undo last regeneration
-              </Button>
-            )}
+          {/* Action bar */}
+          {!loading && (
+            <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-3">
+              {prevDraft && (
+                <button
+                  onClick={() => { setDraft(prevDraft); setPrevDraft(null) }}
+                  className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  ↩ Undo last regeneration
+                </button>
+              )}
 
-            <div className="flex gap-3 items-start flex-col sm:flex-row">
-              <Textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="What should be different? e.g. Make it more aggressive, focus on enterprise buyers…"
-                className="flex-1 min-h-[60px] bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 focus:border-indigo-500 resize-none text-sm"
-                disabled={regenerating}
-              />
-              <Button
-                onClick={regenerate}
-                disabled={regenerating || !feedback.trim()}
-                variant="outline"
-                className="border-gray-700 text-gray-300 hover:border-indigo-500 hover:text-indigo-400 shrink-0"
+              <div className="flex gap-2 items-start">
+                <input
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); regenerate() } }}
+                  placeholder="What should be different? e.g. More aggressive tone, focus on enterprise…"
+                  disabled={regenerating}
+                  className="flex-1 h-10 px-4 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/50 disabled:opacity-50"
+                />
+                <button
+                  onClick={regenerate}
+                  disabled={regenerating || !feedback.trim()}
+                  className="h-10 px-4 rounded-xl text-sm border border-white/[0.08] text-zinc-400 hover:border-violet-500/40 hover:text-violet-400 transition-all disabled:opacity-40 shrink-0"
+                >
+                  Regenerate
+                </button>
+              </div>
+
+              {apiError && <p className="text-sm text-red-400">{apiError}</p>}
+
+              <button
+                onClick={approvePage}
+                disabled={!draft || generating}
+                className="gradient-btn w-full py-3 rounded-xl text-white text-sm font-semibold"
               >
-                {regenerating ? 'Regenerating…' : 'Regenerate'}
-              </Button>
+                Approve &amp; Generate Page →
+              </button>
             </div>
-
-            {apiError && <p className="text-sm text-red-400">{apiError}</p>}
-
-            <Button
-              onClick={approvePage}
-              disabled={!draft || generating}
-              className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              Approve &amp; Generate Page →
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  )
-}
-
-function SectionCard({ section }: { section: Section }) {
-  return (
-    <div className="rounded-lg border border-gray-800 bg-gray-900 p-4 space-y-2">
-      <div className="flex items-center gap-2">
-        <Badge className="bg-indigo-900/50 text-indigo-300 border-indigo-800 text-xs">
-          {SECTION_LABELS[section.type] ?? section.type.toUpperCase()}
-        </Badge>
-      </div>
-      <p className="font-semibold text-white text-sm">{section.heading}</p>
-      {section.subheading && <p className="text-sm text-gray-300">{section.subheading}</p>}
-      {section.cta && <p className="text-xs text-indigo-400">CTA: {section.cta}</p>}
-      {section.items && section.items.length > 0 && (
-        <ul className="text-xs text-gray-400 space-y-1 pl-3">
-          {section.items.map((item, i) => <li key={i} className="list-disc">{item}</li>)}
-        </ul>
-      )}
-      <p className="text-xs text-gray-500 italic border-t border-gray-800 pt-2">
-        Visual: {section.visual}
-      </p>
-    </div>
+    </>
   )
 }

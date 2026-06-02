@@ -123,8 +123,59 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: #09090b;
   }
   html {
     @apply font-sans;
   }
 }
+
+/* Dot grid background */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Glassmorphism card */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gradient button */
+.gradient-btn {
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.gradient-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.gradient-btn:disabled {
+  opacity: 0.5;
+  transform: none;
+}
+
+/* Glow on card hover */
+.card-glow:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+}
+
+/* Markdown prose styles for draft preview */
+.draft-prose h1 { font-size: 1.25rem; font-weight: 700; color: #f4f4f5; margin-bottom: 0.75rem; }
+.draft-prose h2 { font-size: 1rem; font-weight: 600; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.draft-prose p { font-size: 0.875rem; color: #d4d4d8; line-height: 1.6; margin-bottom: 0.5rem; }
+.draft-prose strong { color: #e4e4e7; font-weight: 600; }
+.draft-prose ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.draft-prose li { font-size: 0.875rem; color: #d4d4d8; line-height: 1.6; margin-bottom: 0.25rem; }
+.draft-prose hr { border-color: rgba(255,255,255,0.08); margin: 1rem 0; }

@@ -1,19 +1,4 @@
-export type SectionType = 'hero' | 'features' | 'social_proof' | 'cta'
-
-export type Section = {
-  type: SectionType
-  heading: string
-  subheading?: string
-  cta?: string
-  items?: string[]
-  visual: string
-}
-
-export type Draft = {
-  sections: Section[]
-  palette: string
-  style: string
-}
+export type Draft = string
 
 export type Project = {
   id: string
