@@ -26,10 +26,10 @@ export default async function Home() {
           {/* Subtle radial glow behind heading */}
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 w-[480px] h-[200px] rounded-full"
+            className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 w-full max-w-[480px] h-[200px] rounded-full"
             style={{ background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.10) 0%, transparent 70%)' }}
           />
-          <h1 className="relative text-[2.75rem] font-extrabold tracking-tight leading-tight mb-3 gradient-text">
+          <h1 className="relative text-3xl sm:text-[2.75rem] font-extrabold tracking-tight leading-tight mb-3 gradient-text">
             Turn ideas into<br />landing pages
           </h1>
           <p className="text-lg text-slate-500 max-w-md mx-auto">
