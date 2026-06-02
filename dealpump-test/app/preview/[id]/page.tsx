@@ -83,6 +83,23 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
     setPublishing(false)
   }
 
+  async function unpublishPage() {
+    if (publishing || !published) return
+    setPublishing(true)
+    const res = await fetch('/api/publish', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (res.ok) {
+      setPublished(false)
+      toast('Page unpublished — share link is now offline')
+    } else {
+      toast('Failed to unpublish', 'error')
+    }
+    setPublishing(false)
+  }
+
   async function applyFix() {
     if (!fixFeedback.trim() || fixing || !html) return
     setFixing(true)
@@ -232,12 +249,13 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
               <button onClick={copyShareLink} className="btn-secondary h-8 px-3 text-xs">
                 Copy link
               </button>
-              <span className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="hidden sm:inline">Published</span>
-              </span>
+              <button
+                onClick={unpublishPage}
+                disabled={publishing}
+                className="btn-secondary h-8 px-3 text-xs text-red-600 border-red-200 hover:border-red-400 hover:text-red-700"
+              >
+                Unpublish
+              </button>
             </div>
           ) : (
             <button
