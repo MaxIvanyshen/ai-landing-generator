@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
@@ -110,6 +110,32 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
   }
 
   const busy = regenerating || fixing
+
+  // Inject a click-guard into every srcDoc so anchor links never escape the iframe.
+  // Handles both old pages (href="#id") and new ones (onclick scrollIntoView).
+  const safeHtml = useMemo(() => {
+    if (!html) return ''
+    const guard = `<script>
+(function(){
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('a');
+    if (!el) return;
+    var href = el.getAttribute('href') || '';
+    if (!href || href === '#') return;
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      var target = document.getElementById(href.slice(1));
+      if (target) target.scrollIntoView({behavior:'smooth'});
+      return;
+    }
+    e.preventDefault();
+  }, true);
+})();
+<\/script>`
+    return html.includes('</head>')
+      ? html.replace('</head>', guard + '</head>')
+      : guard + html
+  }, [html])
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
@@ -221,7 +247,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
               className={`h-full transition-all duration-300 ${mobile ? 'w-[390px] shadow-xl' : 'w-full'}`}
             >
               <iframe
-                srcDoc={html}
+                srcDoc={safeHtml}
                 className="w-full h-full border-0"
                 title="Landing page preview"
                 sandbox="allow-scripts"
