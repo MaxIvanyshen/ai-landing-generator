@@ -245,7 +245,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
               <button
                 onClick={applyFix}
                 disabled={!fixFeedback.trim() || fixing || !html}
-                className="btn-primary h-[4.5rem] px-4 text-sm shrink-0 self-stretch"
+                className="btn-primary px-4 text-sm shrink-0 self-stretch"
               >
                 {fixing ? (
                   <span className="flex items-center gap-1.5">

@@ -69,7 +69,7 @@ Update the plan based on the feedback. Return the same markdown structure.`,
 
 export function buildPagePrompt(draft: string) {
   return {
-    system: `You are an expert frontend developer. Convert a landing page plan into a single, beautiful, self-contained HTML file.
+    system: `You are an expert frontend developer. Today's date is ${new Date().toISOString().slice(0, 10)}. Convert a landing page plan into a single, beautiful, self-contained HTML file.
 
 Requirements:
 - Always include this CSS reset: "*, *::before, *::after { box-sizing: border-box; } html, body { margin: 0; padding: 0; }"
@@ -82,9 +82,9 @@ Requirements:
 - NO <img> tags — use inline SVGs, CSS shapes, or pure CSS visuals instead
 - All inline SVGs MUST have explicit width and height attributes (e.g. width="24" height="24") and must never fill the full viewport — decorative SVGs should be small icons, not full-width illustrations
 - Mobile-first responsive layout
-- Include a sticky top navigation bar with the product name/logo on the left and anchor links to each section on the right (e.g. Features, Testimonials, Get Started). Nav should have a solid or slightly translucent background so it stays readable when scrolling. On mobile, show a hamburger menu or stack the links vertically — never hide nav links with no fallback.
+- Include a sticky top navigation bar with the product name/logo on the left and anchor links to each section on the right (e.g. Features, Testimonials, Get Started). Nav should have a solid or slightly translucent background so it stays readable when scrolling. On mobile, show a hamburger button that toggles a dropdown menu — never hide nav links with no fallback. Animate the hamburger icon: when the menu opens, transition the three bars into an X (rotate top bar 45deg, fade middle bar, rotate bottom bar -45deg) using CSS transitions on the bar elements. Animate the mobile menu itself: slide it down with a CSS max-height transition (max-height: 0 → max-height: 300px, overflow: hidden, transition: max-height 0.3s ease) so it opens and closes smoothly instead of snapping.
 - Do NOT use Tailwind opacity modifiers (e.g. bg-color/10) on custom colors defined in tailwind.config — they silently fail in the Play CDN. Use full hex values or rgba() instead for transparent tints.
-- Smooth scroll: add scroll-behavior: smooth to html. For nav links use onclick="document.getElementById('section-id').scrollIntoView({behavior:'smooth'}); return false;" instead of href="#id" anchors — this prevents the link from navigating the browser and keeps the scroll within the page
+- Smooth scroll: add scroll-behavior: smooth to html. For nav links use onclick handlers that (1) close the mobile menu if open, then (2) scroll to the target: onclick="document.getElementById('menu-id').classList.add('hidden'); document.getElementById('section-id').scrollIntoView({behavior:'smooth'}); return false;" — this prevents browser navigation, keeps scroll within the page, and collapses the hamburger menu after a link is tapped
 - All content must be VISIBLE immediately on load — do NOT use Intersection Observer, do NOT start elements with opacity:0 or transform that requires scroll to trigger. Use CSS transitions only for hover effects.
 - Real copy from the plan — no placeholder text
 - Polished, production-quality design that matches the palette and style from the plan
