@@ -51,17 +51,29 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
   async function regeneratePage() {
     if (!draft || regenerating) return
     setRegenerating(true)
-    const res = await fetch('/api/generate-page', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, draft }),
-    })
-    if (res.ok) {
-      const { data: fresh } = await supabase.from('projects').select('html').eq('id', id).single()
-      if (fresh?.html) setHtml(fresh.html)
+    try {
+      const res = await fetch('/api/generate-page', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, draft }),
+      })
+      if (!res.ok) { toast('Regeneration failed', 'error'); setRegenerating(false); return }
+
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let newHtml = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        newHtml += decoder.decode(value, { stream: true })
+      }
+      newHtml = newHtml.replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '').trim()
+
+      await supabase.from('projects').update({ html: newHtml }).eq('id', id)
+      setHtml(newHtml)
       toast('Page regenerated')
-    } else {
-      toast('Regeneration failed', 'error')
+    } catch {
+      toast('Network error — try again', 'error')
     }
     setRegenerating(false)
   }
