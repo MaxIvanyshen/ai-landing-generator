@@ -52,9 +52,6 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
     if (!draft || regenerating) return
     setRegenerating(true)
 
-    const doc = liveIframeRef.current?.contentDocument
-    if (doc) doc.open()
-
     try {
       const res = await fetch('/api/generate-page', {
         method: 'POST',
@@ -62,6 +59,10 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
         body: JSON.stringify({ id, draft }),
       })
       if (!res.ok) { toast('Regeneration failed', 'error'); setRegenerating(false); return }
+
+      // fetch has resolved — React has re-rendered and the iframe is now in the DOM
+      const doc = liveIframeRef.current?.contentDocument
+      if (doc) doc.open()
 
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()

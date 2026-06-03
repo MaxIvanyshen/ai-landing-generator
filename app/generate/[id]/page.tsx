@@ -76,12 +76,9 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
         return
       }
 
-      // Open the iframe document for streaming — browser parses and renders
-      // HTML progressively as chunks arrive, just like a real page load.
+      // fetch has resolved — React has re-rendered and the iframe is now in the DOM
       const doc = iframeRef.current?.contentDocument
-      if (doc) {
-        doc.open()
-      }
+      if (doc) doc.open()
 
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
