@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, use, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/app/ToastProvider'
 
@@ -51,6 +51,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
   async function regeneratePage() {
     if (!draft || regenerating) return
     setRegenerating(true)
+
     try {
       const res = await fetch('/api/generate-page', {
         method: 'POST',
@@ -59,14 +60,35 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
       })
       if (!res.ok) { toast('Regeneration failed', 'error'); setRegenerating(false); return }
 
+      // fetch has resolved — React has re-rendered and the iframe is now in the DOM
+      const doc = liveIframeRef.current?.contentDocument
+      if (doc) doc.open()
+
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
       let newHtml = ''
+      let fenceStripped = false
+      let buffer = ''
+
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        newHtml += decoder.decode(value, { stream: true })
+        const chunk = decoder.decode(value, { stream: true })
+        newHtml += chunk
+
+        if (!fenceStripped) {
+          buffer += chunk
+          if (buffer.length >= 8) {
+            fenceStripped = true
+            doc?.write(buffer.replace(/^```html\n?/, '').replace(/^```\n?/, ''))
+            buffer = ''
+          }
+        } else {
+          doc?.write(chunk)
+        }
       }
+
+      doc?.close()
       newHtml = newHtml.replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '').trim()
 
       await supabase.from('projects').update({ html: newHtml }).eq('id', id)
@@ -172,6 +194,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
 
   const busy = regenerating || fixing
 
+  const liveIframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 })
   useEffect(() => {
@@ -213,6 +236,59 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
+      {/* Live regeneration overlay — same as generate page */}
+      <AnimatePresence>
+        {regenerating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col bg-slate-50"
+          >
+            <div className="bg-white border-b border-slate-100 shadow-sm shrink-0">
+              <div className="max-w-6xl mx-auto px-3 h-12 flex items-center gap-2">
+                <button disabled className="text-sm text-slate-300 flex items-center gap-1 shrink-0 cursor-not-allowed">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-xs shrink-0 opacity-40">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-600 text-white">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span className="hidden md:inline">Desktop</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-slate-500 bg-white">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span className="hidden md:inline">Mobile</span>
+                  </div>
+                </div>
+                <button disabled className="btn-secondary h-8 px-2.5 text-xs shrink-0 opacity-40 cursor-not-allowed">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span className="hidden sm:inline">Regenerate</span>
+                </button>
+                <button disabled className="btn-secondary h-8 px-2.5 text-xs shrink-0 opacity-40 cursor-not-allowed">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+                <div className="flex items-center gap-2 h-8 px-3 rounded-lg bg-indigo-50 border border-indigo-100 text-xs font-medium text-indigo-600 shrink-0 ml-auto">
+                  <span className="w-3 h-3 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                  Regenerating…
+                </div>
+              </div>
+            </div>
+            <iframe ref={liveIframeRef} className="flex-1 w-full border-0 bg-white" title="Live regeneration preview" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Toolbar — single row always */}
       <motion.div
         initial={{ opacity: 0, y: -4 }}

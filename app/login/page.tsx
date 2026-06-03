@@ -47,8 +47,9 @@ export default function LoginPage() {
       } else {
         setSentTo(value)
       }
-    } catch {
-      setError('Network error — check your connection and try again')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(`Error: ${msg} | url: ${(window as {__SUPABASE_URL__?: string}).__SUPABASE_URL__ || 'NOT SET'}`)
     } finally {
       setLoading(false)
     }

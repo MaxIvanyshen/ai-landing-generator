@@ -7,6 +7,9 @@ app = 'ai-landing-generator'
 primary_region = 'iad'
 
 [build]
+  [build.args]
+    NEXT_PUBLIC_SUPABASE_URL = "https://djtttsxrbihdykaslwqv.supabase.co"
+    NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_IZJpRoLKM6YRxW90uV1NRw_c60-bldn"
 
 [http_service]
   internal_port = 3000
