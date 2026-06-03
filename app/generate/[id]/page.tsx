@@ -86,13 +86,27 @@ export default function GeneratePage({ params }: { params: Promise<{ id: string 
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
       let html = ''
+      let fenceStripped = false
+      let buffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         const chunk = decoder.decode(value, { stream: true })
         html += chunk
-        doc?.write(chunk)
+
+        if (!fenceStripped) {
+          buffer += chunk
+          // Wait until we have enough chars to detect ```html\n (8 chars)
+          if (buffer.length >= 8) {
+            fenceStripped = true
+            const clean = buffer.replace(/^```html\n?/, '').replace(/^```\n?/, '')
+            doc?.write(clean)
+            buffer = ''
+          }
+        } else {
+          doc?.write(chunk)
+        }
       }
 
       doc?.close()
