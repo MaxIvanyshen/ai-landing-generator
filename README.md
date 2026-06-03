@@ -2,13 +2,13 @@
 
 A multi-step AI web app that turns a product description into a polished, production-ready landing page. Built as a 6-hour exercise in pragmatic AI product development.
 
-**Live demo:** _add Vercel URL here_
+**Live demo:** _add URL here_
 
 ---
 
 ## Architecture
 
-**Stack:** Next.js 16 (App Router) · TypeScript · Supabase · OpenAI-compatible API · Tailwind CSS · Framer Motion · Vercel
+**Stack:** Next.js 16 (App Router) · TypeScript · Supabase · OpenAI-compatible API · Tailwind CSS · Framer Motion · Fly.io (Docker)
 
 | Layer | Choice | Why |
 |---|---|---|
@@ -16,20 +16,23 @@ A multi-step AI web app that turns a product description into a polished, produc
 | Auth + DB | Supabase | Single `projects` table, magic-link auth, Row Level Security |
 | AI | OpenAI SDK (configurable endpoint) | Works with any OpenAI-compatible provider |
 | Styling | Tailwind + custom CSS | Fast, polished, mobile-first — shadcn scaffolded but mostly replaced |
-| Deploy | Vercel | Zero-config Node.js functions with `maxDuration` for long AI calls |
+| Deploy | Fly.io + Docker | Standalone Next.js image, no serverless cold-start issues |
 
 **Database schema** — one table, minimal:
 ```sql
 projects(id, user_id, prompt, draft text, html text, status, published boolean, created_at)
 ```
-RLS ensures users can only access their own projects — no manual auth checks in API routes.
+Two RLS policies: users can read/write their own rows; anyone (anon) can read rows where `published = true` — so published pages are publicly accessible at `/p/[id]` without auth.
 
 ---
 
 ## Generation Pipeline
 
 ```
-User prompt (home page)
+/ (landing page — public, no auth)
+  ↓ user signs in via magic link
+  ↓
+Home dashboard — prompt form + project grid (published/draft status badges, delete)
   ↓
 POST /api/generate-draft  (AI Call 1)
   → Returns structured markdown: sections, copy, palette, visual directions
@@ -45,7 +48,7 @@ User clicks "Approve & Generate Page"
   ↓
 POST /api/generate-page  (AI Call 2, streaming)
   → Draft markdown → single self-contained HTML file
-  → Streamed token-by-token to browser (no timeout, visible progress)
+  → Streamed token-by-token; browser renders live as tokens arrive (document.write)
   → Client accumulates stream, strips markdown fences, saves to Supabase
   → Tailwind CDN, Google Fonts, inline SVGs, real copy, mobile-first layout
   ↓
@@ -53,13 +56,13 @@ POST /api/generate-page  (AI Call 2, streaming)
   → iframe renders full HTML; desktop (scaled to fit) / mobile (390px) toggle
   → Fix feedback textarea → POST /api/fix-page (AI Call 3, streaming)
      Streams targeted HTML corrections back; client saves result
-  → Regenerate from scratch (re-runs AI Call 2)
+  → Regenerate from scratch (re-runs AI Call 2, also with live streaming preview)
   → Download HTML button
-  → Publish toggle: unpublished pages return 404 at /p/[id]
+  → Publish / Unpublish toggle: published pages are live at /p/[id]
   → Copy share link → /p/[id] (public, no auth required)
 ```
 
-Streaming (AI Calls 2 and 3) means the browser never sits on a hung request — tokens flow as they're generated, so even a 60-second generation stays responsive.
+Streaming (AI Calls 2 and 3) means no Fly.io function timeouts and visible live progress — the page paints section by section as tokens arrive.
 
 ---
 
@@ -81,11 +84,11 @@ npx supabase db push
 Or run the SQL files in `supabase/migrations/` directly in the Supabase SQL editor (in order).
 
 Enable **Email (magic link)** in Authentication → Providers.  
-Set the redirect URL to `http://localhost:3000/auth/callback` (and your production URL).
+Add your production URL to Authentication → URL Configuration → Redirect URLs.
 
 **3. Configure environment variables**
 
-Copy `.env.local.example` to `.env.local` and fill in:
+Fill in `.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
@@ -94,10 +97,22 @@ OPENAI_API_KEY=your-api-key
 OPENAI_MODEL=gpt-4.1-mini                   # default; override as needed
 ```
 
-**4. Run**
+**4. Run locally**
 ```bash
 npm run dev
 ```
+
+**5. Deploy to Fly.io**
+
+Fill in the `[build.args]` in `fly.toml` with your Supabase URL and anon key (safe to commit — anon key is public by design), then:
+
+```bash
+fly launch        # first time only — creates the app
+fly secrets set OPENAI_API_KEY=... OPENAI_BASE_URL=... OPENAI_MODEL=...
+fly deploy
+```
+
+`NEXT_PUBLIC_*` vars must be build args (baked into the client bundle at build time). All other secrets — API keys — go in `fly secrets`.
 
 ---
 
@@ -110,8 +125,6 @@ This project was built entirely with Claude Code (Anthropic's CLI coding assista
 - **Documentation research:** Used the context7 MCP tool to pull current docs for Next.js, `@supabase/ssr`, and the OpenAI Node SDK to verify patterns (async `cookies()`, correct cookie propagation in auth callback, `allowedDevOrigins` for tunnel testing).
 
 - **Code generation:** All files generated by Claude Code — Supabase clients, middleware, API routes, pages, components, CSS. Iteration was fast because the plan was precise enough that generated code required minimal correction.
-
-- **Debugging:** Claude Code diagnosed several non-obvious issues: Next.js 16's dev server blocking JS chunks from ngrok tunnels (`allowedDevOrigins`), Supabase auth callback cookies not propagating to redirect responses, and iOS Safari autofill bypassing React's `onChange`.
 
 - **Prompt engineering:** The system prompts in `lib/prompts.ts` were tuned iteratively — including specific constraints like avoiding Tailwind opacity modifiers on CDN, forcing contrast checks per section, and injecting the current date so generated copy stays accurate.
 
